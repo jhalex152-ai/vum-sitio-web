@@ -824,11 +824,42 @@
       <div data-tilt class="rounded-2xl glass p-6 sm:p-7 fade-up" data-fade style="perspective: 1200px;">
         <div data-tilt-inner>
         <form id="contact-form" novalidate>
+          <input type="hidden" name="_subject" value="Nuevo contacto desde vumtech.com.co">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
           <div class="mb-4">
             <label for="nombre" class="block text-sm font-medium text-white mb-1.5">Nombre</label>
             <input type="text" id="nombre" name="nombre" required autocomplete="name"
               class="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-white placeholder-[#8f81b0] focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
               placeholder="Tu nombre">
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label for="empresa" class="block text-sm font-medium text-white mb-1.5">Empresa</label>
+              <input type="text" id="empresa" name="empresa" required autocomplete="organization"
+                class="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-white placeholder-[#8f81b0] focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
+                placeholder="Nombre de tu empresa">
+            </div>
+            <div>
+              <label for="cargo" class="block text-sm font-medium text-white mb-1.5">Cargo</label>
+              <input type="text" id="cargo" name="cargo" autocomplete="organization-title"
+                class="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-white placeholder-[#8f81b0] focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
+                placeholder="Tu cargo">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label for="telefono" class="block text-sm font-medium text-white mb-1.5">Teléfono</label>
+              <input type="tel" id="telefono" name="telefono" required autocomplete="tel"
+                class="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-white placeholder-[#8f81b0] focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
+                placeholder="315 000 0000">
+            </div>
+            <div>
+              <label for="ciudad" class="block text-sm font-medium text-white mb-1.5">Ciudad</label>
+              <input type="text" id="ciudad" name="ciudad" autocomplete="address-level2"
+                class="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-white placeholder-[#8f81b0] focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
+                placeholder="Cali">
+            </div>
           </div>
           <div class="mb-4">
             <label for="correo" class="block text-sm font-medium text-white mb-1.5">Correo</label>
@@ -842,11 +873,14 @@
               class="w-full rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-white placeholder-[#8f81b0] focus:border-violet-400 focus:ring-1 focus:ring-violet-400 outline-none"
               placeholder="Cuéntanos qué te está quitando tiempo o dinero"></textarea>
           </div>
-          <button type="submit" class="w-full inline-flex items-center justify-center rounded-full brand-gradient glow-btn text-white font-semibold px-7 py-3.5 hover:brightness-110 transition-all">
-            Enviar mensaje
+          <button type="submit" id="form-submit-btn" class="w-full inline-flex items-center justify-center rounded-full brand-gradient glow-btn text-white font-semibold px-7 py-3.5 hover:brightness-110 transition-all disabled:opacity-60">
+            <span id="form-submit-text">Enviar mensaje</span>
           </button>
           <p id="form-confirmation" class="hidden mt-4 text-sm text-violet-300 font-medium" role="status">
             Gracias, recibimos tu mensaje. Te contactaremos pronto para agendar tu diagnóstico.
+          </p>
+          <p id="form-error" class="hidden mt-4 text-sm text-red-300 font-medium" role="status">
+            No pudimos enviar tu mensaje. Escríbenos directo a <a href="mailto:gerencia@vumtech.com.co" class="underline">gerencia@vumtech.com.co</a> o por WhatsApp.
           </p>
         </form>
         </div>
@@ -922,14 +956,39 @@
 
     var form = document.getElementById('contact-form');
     var confirmation = document.getElementById('form-confirmation');
+    var formError = document.getElementById('form-error');
+    var submitBtn = document.getElementById('form-submit-btn');
+    var submitText = document.getElementById('form-submit-text');
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!form.checkValidity()) {
         form.reportValidity();
         return;
       }
-      confirmation.classList.remove('hidden');
-      form.reset();
+
+      confirmation.classList.add('hidden');
+      formError.classList.add('hidden');
+      submitBtn.disabled = true;
+      submitText.textContent = 'Enviando…';
+
+      fetch('https://formsubmit.co/ajax/gerencia@vumtech.com.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(Object.fromEntries(new FormData(form)))
+      })
+        .then(function (res) { if (!res.ok) throw new Error('bad status'); })
+        .then(function () {
+          confirmation.classList.remove('hidden');
+          form.reset();
+        })
+        .catch(function () {
+          formError.classList.remove('hidden');
+        })
+        .finally(function () {
+          submitBtn.disabled = false;
+          submitText.textContent = 'Enviar mensaje';
+        });
     });
 
     var fadeEls = document.querySelectorAll('[data-fade]');
