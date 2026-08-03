@@ -74,8 +74,14 @@
     box-shadow: 0 10px 24px -8px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.25);
   }
 
-  /* Sections should never split across a page break mid-card */
-  section, .glass, .logo-grid figure, [data-card] { break-inside: avoid; }
+  /* Cards should never split across a page break mid-card. NOTE: this must
+     NOT include the top-level <section> elements — they're taller than a
+     single page, and Chrome's print engine still paginates break-inside:avoid
+     against its own internal page-height assumptions even when a custom
+     @page size is set, which was shoving whole sections down to a computed
+     "page boundary" and leaving large blank gaps (and dead space at the
+     end of the document). */
+  .glass, .logo-grid figure, [data-card] { break-inside: avoid; }
 
   /* Decorative connector "flow" lines are motion-only; hide the filler,
      keep the plain static line underneath */
@@ -596,8 +602,8 @@
   // so "Save as PDF" from the print dialog produces one continuous
   // page instead of splitting across Letter/A4-sized pages.
   document.getElementById('btn-pdf').addEventListener('click', function () {
-    var widthPx = document.documentElement.scrollWidth;
-    var heightPx = document.body.scrollHeight;
+    var widthPx = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+    var heightPx = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
     var widthIn = (widthPx / 96).toFixed(2);
     var heightIn = (heightPx / 96).toFixed(2);
 
