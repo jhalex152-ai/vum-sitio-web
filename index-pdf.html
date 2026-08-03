@@ -582,7 +582,7 @@
 </main>
 
 <!-- FOOTER -->
-<footer class="bg-[#050310] text-[#c3b8dd] border-t border-white/10">
+<footer id="brochure-footer" class="bg-[#050310] text-[#c3b8dd] border-t border-white/10">
   <div class="max-w-7xl mx-auto px-5 sm:px-8 py-10">
     <img src="assets/brand/logo-vum.png" alt="VUM" class="h-8 w-auto mb-3">
     <p class="text-sm text-[#8f81b0] leading-relaxed max-w-sm">
@@ -598,24 +598,76 @@
 </footer>
 
 <script>
-  // Measure the full document and set a matching single @page size,
+  // Measure the real content box and set a matching single @page size,
   // so "Save as PDF" from the print dialog produces one continuous
   // page instead of splitting across Letter/A4-sized pages.
+  //
+  // The page WIDTH is pinned to the design's own content cap (max-w-7xl =
+  // 1280px), not document.documentElement.scrollWidth — the browser window's
+  // width varies with whoever's viewing it, and the content is centered
+  // with max-w-7xl anyway, so on a wide monitor the old scrollWidth-based
+  // page ended up much wider than the actual content, leaving big dead
+  // margins on both sides and making the brochure look tiny/zoomed out
+  // when opened. Body is temporarily pinned to that same width so every
+  // section's edge-to-edge background lines up with the page edges
+  // instead of whatever the on-screen window happened to be.
+  //
+  // The page HEIGHT is measured from the bottom edge of the actual last
+  // element (the footer), not document.body.scrollHeight — the latter
+  // can end up taller than the visible content once images finish
+  // loading/reflowing, which left dead blank space at the end of the PDF.
+  var PRINT_WIDTH_PX = 1280;
+
+  function imagesReady() {
+    var imgs = Array.prototype.slice.call(document.images);
+    return Promise.all(imgs.map(function (img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function (resolve) {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+      });
+    }));
+  }
+
+  function nextFrame() {
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+    });
+  }
+
   document.getElementById('btn-pdf').addEventListener('click', function () {
-    var widthPx = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
-    var heightPx = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
-    var widthIn = (widthPx / 96).toFixed(2);
-    var heightIn = (heightPx / 96).toFixed(2);
+    var body = document.body;
+    var prevWidth = body.style.width;
+    var prevMaxWidth = body.style.maxWidth;
+    var prevMargin = body.style.margin;
 
-    var style = document.getElementById('dynamic-page-size');
-    if (!style) {
-      style = document.createElement('style');
-      style.id = 'dynamic-page-size';
-      document.head.appendChild(style);
-    }
-    style.textContent = '@page { size: ' + widthIn + 'in ' + heightIn + 'in; margin: 0; }';
+    body.style.width = PRINT_WIDTH_PX + 'px';
+    body.style.maxWidth = PRINT_WIDTH_PX + 'px';
+    body.style.margin = '0';
 
-    window.print();
+    imagesReady().then(nextFrame).then(function () {
+      var footer = document.getElementById('brochure-footer');
+      var heightPx = Math.ceil(footer.getBoundingClientRect().bottom + window.scrollY);
+      var widthIn = (PRINT_WIDTH_PX / 96).toFixed(2);
+      var heightIn = (heightPx / 96).toFixed(2);
+
+      var style = document.getElementById('dynamic-page-size');
+      if (!style) {
+        style = document.createElement('style');
+        style.id = 'dynamic-page-size';
+        document.head.appendChild(style);
+      }
+      style.textContent = '@page { size: ' + widthIn + 'in ' + heightIn + 'in; margin: 0; }';
+
+      window.print();
+
+      window.addEventListener('afterprint', function restore() {
+        window.removeEventListener('afterprint', restore);
+        body.style.width = prevWidth;
+        body.style.maxWidth = prevMaxWidth;
+        body.style.margin = prevMargin;
+      });
+    });
   });
 </script>
 
